@@ -219,7 +219,7 @@ label.f select[disabled]{background:var(--accent-soft);color:var(--ink);opacity:
         </ul>
         <div class="spacer"></div>
         <button class="btn" id="liveBtn">Įjungti kamerą</button>
-        <p class="small muted" id="camHint">Telefonas paklaus leidimo naudoti kamerą. Ekrane matysite nurodymus, pritūpimai bus skaičiuojami automatiškai.</p>
+        <p class="small muted" id="camHint">Telefonas paklaus leidimo naudoti kamerą. Įsijunkite garsą: balsas pasakys, ką pataisyti, ir skaičiuos pritūpimus.</p>
         <label class="btn secondary" for="galInput" style="cursor:pointer">Pasirinkti įrašą iš galerijos</label>
         <input type="file" id="galInput" accept="video/*" hidden>
         <button class="btn secondary" id="sampleBtn">Neturiu galimybės filmuoti. Rodyti pavyzdį</button>
@@ -235,6 +235,7 @@ label.f select[disabled]{background:var(--accent-soft);color:var(--ink);opacity:
         <div class="cam-big" id="camBig" hidden></div>
         <div class="cam-count" id="camCount" hidden></div>
         <div class="cam-bar">
+          <button id="camMute" type="button">Išjungti garsą</button>
           <button id="camFlip" type="button">Kita kamera</button>
           <button id="camCancel" type="button">Atšaukti</button>
         </div>
@@ -390,7 +391,7 @@ var NOTES={
   landing:["2 / 10 · Testo puslapis","Puslapis atsidaro programėlės viduje. Tikrame produkte, jei programėlė blokuoja kamerą, puslapis automatiškai pasiūlo nufilmuoti telefono kamera arba atidaryti naršyklėje."],
   consent:["3 / 10 · Sutikimas","Trumpas sutikimas. Galutines formuluotes tvirtins teisininkas: testas negali skambėti kaip diagnozė, o vaizdo apdorojimas turi atitikti BDAR."],
   setup:["4 / 10 · Pasiruošimas","Paspaudus „Įjungti kamerą“, kamera atsidaro šiame puslapyje. Jei kamera nepasiekiama, galima pasirinkti įrašą iš galerijos arba peržiūrėti pavyzdį."],
-  camera:["4 / 10 · Filmavimas su vedliu","Telefonas tikrina kadrą gyvai: ar matosi visas kūnas, ar užtenka šviesos, ar stovite veidu. Kai viskas gerai, rėmelis nusidažo žaliai, prasideda 3-2-1 atskaita su pyptelėjimais ir pritūpimai skaičiuojami automatiškai. Po 5 pritūpimų testas baigiasi pats. Vaizdas neįrašomas: analizuojamas tik gyvas vaizdas."],
+  camera:["4 / 10 · Filmavimas su vedliu","Telefonas tikrina kadrą gyvai: ar matosi visas kūnas, ar užtenka šviesos, ar stovite veidu. Kai viskas gerai, rėmelis nusidažo žaliai, prasideda 3-2-1 atskaita su pyptelėjimais ir pritūpimai skaičiuojami automatiškai. Ramus moters balsas lietuviškai sako, ką pataisyti, ir skaičiuoja pritūpimus. Po 5 pritūpimų testas baigiasi pats. Vaizdas neįrašomas: analizuojamas tik gyvas vaizdas. Prototipe balsas sugeneruotas kompiuteriu."],
   pain:["5 / 10 · Skausmo klausimas","Jei pritūpiant skauda, pacientas visada nukreipiamas pas gydytoją, nepriklausomai nuo matavimų."],
   analysis:["6 / 10 · Analizė","Analizė vyksta jūsų telefone: kūno taškų atpažinimas kiekviename kadre, triukšmo filtravimas, pritūpimų atpažinimas ir matavimai giliausiame taške. Įrašas niekur nesiunčiamas."],
   result:["7 / 10 · Rezultatas","Pacientas mato žymą, rekomenduojamą specialistą ir kadrą su kūno taškais. Skaičių jam nerodome. Žemiau matote matavimus, kurių pacientas nemato. Ribos laikinos, jas nustatys gydytojai."],
@@ -569,6 +570,32 @@ async function analyseFile(file){
 }
 
 
+
+/* ---------------- voice guide (pre-recorded Lithuanian clips, one shared audio element unlocked by the tap) ---------------- */
+var VOICE_KEYS=["intro","stand","farther","feet","head","legs","center","closer","face","dark","good","start","n1","n2","n3","n4","n5","lost","done"];
+var voice={el:null,url:{},muted:false,playing:false,pendingKey:null,pendingSince:0,lastAt:{},loaded:false};
+var SILENT="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA//NwwAAAAAAAAAAAAEluZm8AAAAPAAAACAAAA/oAR0dHR0dHR0dHR0dHYmJiYmJiYmJiYmJifHx8fHx8fHx8fHx8fJaWlpaWlpaWlpaWlrGxsbGxsbGxsbGxsbHLy8vLy8vLy8vLy8vl5eXl5eXl5eXl5eXl////////////////AAAAAExhdmM2MC4zMQAAAAAAAAAAAAAAACQC1AAAAAAAAAP6yysejgAAAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NCxKMAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NAxKQAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80LEowAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80DEpAAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsSjAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==";
+function voiceUnlock(){
+  try{ if(!voice.el){ voice.el=new Audio(); voice.el.setAttribute("playsinline",""); voice.el.addEventListener("ended",function(){voice.playing=false;}); voice.el.addEventListener("error",function(){voice.playing=false;}); }
+       voice.el.src=SILENT; var pr=voice.el.play(); if(pr&&pr.catch) pr.catch(function(){}); }catch(e){}
+  if(!voice.loaded){ voice.loaded=true; VOICE_KEYS.forEach(function(k){ fetch("balsas/"+k+".mp3").then(function(r){return r.blob();}).then(function(b){ voice.url[k]=URL.createObjectURL(b); }).catch(function(){}); }); }
+}
+function say(k,force){
+  if(voice.muted||!voice.el) return false;
+  if(voice.playing&&!force) return false;
+  var src=voice.url[k]||("balsas/"+k+".mp3");
+  try{ voice.el.pause(); voice.el.src=src; voice.el.currentTime=0; voice.playing=true; var pr=voice.el.play(); if(pr&&pr.catch) pr.catch(function(){voice.playing=false;}); voice.lastAt[k]=performance.now(); console.log("[judesys] say "+k); return true; }catch(e){ voice.playing=false; return false; }
+}
+function guide(k){
+  // speak a correction once the problem has lasted ~1 s (any problem), at most one correction every 3.5 s, and not the same one within 7 s
+  var now=performance.now();
+  if(!voice.badSince) voice.badSince=now;
+  if(now-voice.badSince<1000) return;
+  if(voice.lastGuide&&now-voice.lastGuide<3500) return;
+  if(voice.lastAt[k]&&now-voice.lastAt[k]<7000) return;
+  if(say(k,false)) voice.lastGuide=now;
+}
+function guideOk(){ voice.badSince=0; }
 /* ---------------- live camera with guide ---------------- */
 var cam={stream:null,facing:"user",raf:null,phase:"idle",okSince:0,cdStart:0,frames:[],reps:0,st:"up",sm:[],standRef:0,minS:9,lastDet:0,lastLum:0,lum:120,lostSince:0,recStart:0,still:null,stillS:9,audio:null};
 var TARGET_REPS=5, MAX_REC_MS=30000;
@@ -594,33 +621,35 @@ async function startCamera(){
   camMsg("Ruošiamas analizės modelis…");
   var lm;
   try{ lm=await lmP; }catch(e){ stopCamera(); show("setup"); $("camHint").textContent="Analizės modelio įkelti nepavyko. Pabandykite dar kartą arba peržiūrėkite pavyzdį."; return; }
-  resetLive(); cam.phase="framing";
+  resetLive(); cam.phase="framing"; cam.goodSaid=false;
+  say("intro",true);
   loop(lm);
 }
 function resetLive(){ cam.okSince=0; cam.frames=[]; cam.reps=0; cam.st="up"; cam.sm=[]; cam.standRef=0; cam.minS=9; cam.still=null; cam.stillS=9; cam.lostSince=0; }
 function stopCamera(){ if(cam.raf) cancelAnimationFrame(cam.raf); cam.raf=null; cam.phase="idle"; if(cam.stream){ cam.stream.getTracks().forEach(function(t){t.stop();}); cam.stream=null; } }
-$("liveBtn").addEventListener("click",function(){ startCamera(); });
+$("liveBtn").addEventListener("click",function(){ voiceUnlock(); startCamera(); });
+$("camMute").addEventListener("click",function(){ voice.muted=!voice.muted; if(voice.muted&&voice.el){ try{voice.el.pause();}catch(e){} voice.playing=false; } this.textContent=voice.muted?"Įjungti garsą":"Išjungti garsą"; });
 $("camCancel").addEventListener("click",function(){ stopCamera(); show("setup"); });
-$("camFlip").addEventListener("click",function(){ stopCamera(); cam.facing=cam.facing==="user"?"environment":"user"; startCamera(); });
+$("camFlip").addEventListener("click",function(){ voiceUnlock(); stopCamera(); cam.facing=cam.facing==="user"?"environment":"user"; startCamera(); });
 
 function measureLum(v){
   try{ var c=measureLum.c||(measureLum.c=document.createElement("canvas")); c.width=32; c.height=48; var x=c.getContext("2d",{willReadFrequently:true}); x.drawImage(v,0,0,32,48); var d=x.getImageData(0,0,32,48).data,s=0; for(var i=0;i<d.length;i+=4) s+=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]; return s/(d.length/4); }catch(e){ return 120; }
 }
 function framingCheck(p){
-  if(!p) return {ok:false,msg:"Atsistokite priešais telefoną"};
+  if(!p) return {ok:false,msg:"Atsistokite priešais telefoną",key:"stand"};
   if(location.hash==="#bandymas") return {ok:true};
   var vis=function(i){return (p[i].visibility==null?1:p[i].visibility)>=0.6;};
   var inX=function(i){return p[i].x>0.02&&p[i].x<0.98;};
   var head=vis(0)&&p[0].y>0.02, feet=vis(27)&&vis(28)&&p[27].y<0.97&&p[28].y<0.97;
-  if(!feet&&!head) return {ok:false,msg:"Atsitraukite toliau"};
-  if(!feet) return {ok:false,msg:"Nesimato pėdų. Atsitraukite"};
-  if(!head) return {ok:false,msg:"Nesimato galvos. Atsitraukite"};
-  if(![23,24,25,26,27,28].every(vis)) return {ok:false,msg:"Nesimato kojų. Pasirūpinkite šviesa"};
-  if(![0,23,24,27,28].every(inX)) return {ok:false,msg:"Pasislinkite į kadro vidurį"};
+  if(!feet&&!head) return {ok:false,msg:"Atsitraukite toliau",key:"farther"};
+  if(!feet) return {ok:false,msg:"Nesimato pėdų. Atsitraukite",key:"feet"};
+  if(!head) return {ok:false,msg:"Nesimato galvos. Atsitraukite",key:"head"};
+  if(![23,24,25,26,27,28].every(vis)) return {ok:false,msg:"Nesimato kojų. Pasirūpinkite šviesa",key:"legs"};
+  if(![0,23,24,27,28].every(inX)) return {ok:false,msg:"Pasislinkite į kadro vidurį",key:"center"};
   var bodyH=((p[27].y+p[28].y)/2)-p[0].y;
-  if(bodyH<0.45) return {ok:false,msg:"Prieikite truputį arčiau"};
+  if(bodyH<0.45) return {ok:false,msg:"Prieikite truputį arčiau",key:"closer"};
   var hipW=Math.abs(p[23].x-p[24].x), leg=((p[27].y+p[28].y)-(p[23].y+p[24].y))/2;
-  if(leg>0&&hipW/leg<0.12) return {ok:false,msg:"Atsisukite veidu į telefoną"};
+  if(leg>0&&hipW/leg<0.12) return {ok:false,msg:"Atsisukite veidu į telefoną",key:"face"};
   return {ok:true};
 }
 function drawOverlay(p,color){
@@ -652,25 +681,25 @@ function loop(lm){
   var r=null; try{ r=lm.detectForVideo(v,nextTs(now)); }catch(e){ console.log("[judesys] live detect",e); return; }
   var p=(r&&r.landmarks&&r.landmarks[0])?r.landmarks[0]:null;
   var fc=framingCheck(p);
-  if(cam.lum<45) fc={ok:false,msg:"Per tamsu. Įjunkite šviesą"};
+  if(cam.lum<45) fc={ok:false,msg:"Per tamsu. Įjunkite šviesą",key:"dark"};
   if(cam.phase==="framing"){
     drawOverlay(p,fc.ok?"#3fb067":"#e0572a");
-    if(fc.ok){ camMsg("Puiku. Nejudėkite","ok"); if(!cam.okSince) cam.okSince=now; if(now-cam.okSince>1200){ cam.phase="countdown"; cam.cdStart=now; cam.cdLast=0; } }
-    else { cam.okSince=0; camMsg(fc.msg,"bad"); }
+    if(fc.ok){ camMsg("Puiku. Nejudėkite","ok"); guideOk(); if(!cam.okSince){ cam.okSince=now; if(!voice.lastAt.good||now-voice.lastAt.good>6000) say("good",false); } if(now-cam.okSince>2000&&!voice.playing){ cam.phase="countdown"; cam.cdStart=now; cam.cdLast=0; } }
+    else { cam.okSince=0; camMsg(fc.msg,"bad"); guide(fc.key); }
   } else if(cam.phase==="countdown"){
     drawOverlay(p,fc.ok?"#3fb067":"#e0572a");
-    if(!fc.ok){ cam.phase="framing"; cam.okSince=0; $("camBig").hidden=true; camMsg(fc.msg,"bad"); return; }
+    if(!fc.ok){ cam.phase="framing"; cam.okSince=0; $("camBig").hidden=true; camMsg(fc.msg,"bad"); guide(fc.key); return; }
     var left=3-Math.floor((now-cam.cdStart)/1000);
     if(left!==cam.cdLast&&left>0){ cam.cdLast=left; beep(660,0.15); }
     $("camBig").hidden=false; $("camBig").textContent=left>0?left:"";
     camMsg("Pasiruoškite","ok");
-    if(left<=0){ $("camBig").hidden=true; cam.phase="rec"; cam.recStart=now; beep(990,0.3); $("camCount").hidden=false; updCount(); camMsg("Pradėkite pritūpimus","ok"); }
+    if(left<=0){ $("camBig").hidden=true; cam.phase="rec"; cam.recStart=now; beep(990,0.3); setTimeout(function(){ say("start",true); },250); $("camCount").hidden=false; updCount(); camMsg("Pradėkite pritūpimus","ok"); }
   } else if(cam.phase==="rec"){
     drawOverlay(p,fc.ok?"#3fb067":"#e0b42a");
     var t=(now-cam.recStart)/1000;
     cam.frames.push({t:t,lm:p?p.map(function(q){return {x:q.x,y:q.y,visibility:q.visibility};}):null});
-    if(!fc.ok){ if(!cam.lostSince) cam.lostSince=now; if(now-cam.lostSince>700) camMsg(fc.msg,"bad"); }
-    else { cam.lostSince=0; camMsg(cam.reps>=TARGET_REPS-1?"Paskutinis":"Tęskite","ok"); }
+    if(!fc.ok){ if(!cam.lostSince) cam.lostSince=now; if(now-cam.lostSince>700) camMsg(fc.msg,"bad"); if(now-cam.lostSince>1500&&!p) guide("lost"); }
+    else { cam.lostSince=0; guideOk(); camMsg(cam.reps>=TARGET_REPS-1?"Paskutinis":"Tęskite","ok"); }
     if(p&&[23,24,27,28].every(function(i){return (p[i].visibility==null?1:p[i].visibility)>=0.5;})) liveRep(p,v);
     if(cam.reps>=TARGET_REPS||now-cam.recStart>MAX_REC_MS) endRecording(v);
   }
@@ -683,7 +712,7 @@ function liveRep(p,v){
   var r=s/(cam.standRef||1);
   if(r<cam.stillS){ cam.stillS=r; snapshot(v,p); }
   if(cam.st==="up"&&r<0.86){ cam.st="down"; }
-  else if(cam.st==="down"&&r>0.94){ cam.st="up"; cam.reps++; beep(880,0.12); updCount(); }
+  else if(cam.st==="down"&&r>0.94){ cam.st="up"; cam.reps++; if(!say("n"+cam.reps,true)) beep(880,0.12); updCount(); }
 }
 function updCount(){ $("camCount").innerHTML=cam.reps+" / "+TARGET_REPS+"<small>pritūpimai</small>"; }
 function snapshot(v,p){
@@ -692,7 +721,7 @@ function snapshot(v,p){
 function endRecording(v){
   var W=cam.still?cam.still.width:(v.videoWidth||720), H=cam.still?cam.still.height:(v.videoHeight||1280);
   var frames=cam.frames, mirrored=cam.facing==="user", still=cam.still;
-  beep(990,0.15); setTimeout(function(){beep(990,0.25);},220);
+  setTimeout(function(){ say("done",true); },700);
   stopCamera();
   if(mirrored){ frames=frames.map(function(f){ return {t:f.t,lm:f.lm?f.lm.map(function(q){return {x:1-q.x,y:q.y,visibility:q.visibility};}):null}; }); }
   state.liveFrames={frames:frames,W:W,H:H,still:still};
